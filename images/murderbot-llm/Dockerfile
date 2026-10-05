@@ -4,6 +4,8 @@ FROM nvidia/cuda:13.1.2-devel-ubuntu24.04@sha256:b9f64abf7226fdb3463ca202bc99878
 ARG DEBIAN_FRONTEND=noninteractive
 ARG NINFER_REPO=https://github.com/dean-amer-dev/ninfer.git
 ARG NINFER_REF=15700cf28b8a74999ab35cf647d436d85b00affa
+# nvcc translation units are memory-heavy; unbounded Ninja parallelism overran the 6Gi BuildKit sidecar.
+ARG BUILD_JOBS=4
 
 RUN apt-get update \
     && apt-get install --yes --no-install-recommends \
@@ -34,7 +36,7 @@ RUN cmake -S . -B /build -G Ninja \
         -DNINFER_BUILD_APPS=ON \
         -DBUILD_TESTING=OFF \
         -DNINFER_BUILD_BENCHMARKS=OFF \
-    && cmake --build /build --parallel --target ninfer ninfer-serve
+    && cmake --build /build --parallel "$BUILD_JOBS" --target ninfer ninfer-serve
 
 FROM nvidia/cuda:13.1.2-runtime-ubuntu24.04@sha256:bff001d3257971cc4752e15ac2d354befa70995ded8e141741ade50569fc192e
 
