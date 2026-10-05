@@ -1,5 +1,0 @@
-FROM python:3.12-slim
-RUN pip install --no-cache-dir fastapi uvicorn docker huggingface_hub pytest httpx
-WORKDIR /app
-COPY . .
-CMD ["python3", "-m", "pytest", "test_model_switcher.py", "-v"]
