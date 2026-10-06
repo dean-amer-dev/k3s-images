@@ -44,6 +44,7 @@ ARG DEBIAN_FRONTEND=noninteractive
 RUN apt-get update \
     && apt-get install --yes --no-install-recommends \
         ca-certificates \
+        curl \
         libavcodec60 \
         libavformat60 \
         libavutil58 \
@@ -53,10 +54,11 @@ RUN apt-get update \
 
 COPY --from=build /build/apps/ninfer /usr/local/bin/ninfer
 COPY --from=build /build/apps/ninfer-serve /usr/local/bin/ninfer-serve
+COPY entrypoint.sh /usr/local/bin/entrypoint.sh
 
 WORKDIR /workspace
 EXPOSE 8080
 STOPSIGNAL SIGTERM
 
-ENTRYPOINT ["ninfer-serve"]
+ENTRYPOINT ["/usr/local/bin/entrypoint.sh"]
 CMD ["--help"]
