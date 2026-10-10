@@ -49,7 +49,7 @@ def load_prompt(query: str) -> tuple[str, str]:
         return text, label
     except Exception as e:
         print(f"WARNING: could not load Phoenix prompt {name!r}, using built-in default: {e}")
-        return "", "default (phoenix prompt unavailable)"
+        return "", f"default (phoenix prompt unavailable: {type(e).__name__}: {str(e)[:150]!r})"
 
 
 def slugify(text: str) -> str:
