@@ -2,3 +2,4 @@ gpt-researcher==0.16.1
 fastmcp>=3.0
 arize-phoenix-otel
 openinference-instrumentation-openai
+arize-phoenix-client
