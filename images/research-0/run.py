@@ -27,12 +27,12 @@ def setup_tracing() -> None:
     OpenAIInstrumentor().instrument(tracer_provider=provider)
 
 
-def load_prompt(query: str) -> str:
-    """Report instructions from the Phoenix prompt (name/tag from env); empty string means use the built-in default."""
+def load_prompt(query: str) -> tuple[str, str]:
+    """Report instructions from the Phoenix prompt (name/tag from env) and a label for the note; empty text means use the built-in default."""
     name = os.environ.get("PHOENIX_PROMPT_NAME")
     endpoint = os.environ.get("PHOENIX_COLLECTOR_ENDPOINT")
     if not name or not endpoint:
-        return ""
+        return "", "default"
     try:
         from phoenix.client import Client
 
@@ -44,11 +44,12 @@ def load_prompt(query: str) -> str:
             m["content"] if isinstance(m["content"], str) else "".join(p.get("text", "") for p in m["content"])
             for m in messages
         )
-        print(f"using Phoenix prompt {name} version {getattr(version, 'id', '?')}")
-        return text
+        label = f"phoenix:{name}@{getattr(version, 'id', '?')}"
+        print(f"using Phoenix prompt {label}")
+        return text, label
     except Exception as e:
         print(f"WARNING: could not load Phoenix prompt {name!r}, using built-in default: {e}")
-        return ""
+        return "", "default (phoenix prompt unavailable)"
 
 
 def slugify(text: str) -> str:
@@ -63,7 +64,8 @@ async def main() -> None:
 
     researcher = GPTResearcher(query=query, report_type="research_report")
     await researcher.conduct_research()
-    report = await researcher.write_report(custom_prompt=load_prompt(query))
+    prompt_text, prompt_label = load_prompt(query)
+    report = await researcher.write_report(custom_prompt=prompt_text)
     sources = sorted(set(researcher.get_source_urls()))
     if not report or not sources:
         sys.exit(f"research produced no report or no sources (sources={len(sources)})")
@@ -71,7 +73,7 @@ async def main() -> None:
     today = datetime.date.today().isoformat()
     path = f"{NOTE_DIR}/{today}-{slugify(query)}.md"
     note = (
-        "---\nstatus: active\ntype: note\n---\n\n"
+        f"---\nstatus: active\ntype: note\nprompt: {prompt_label}\n---\n\n"
         f"Query: {query}\n\n{report}\n\n## Sources\n\n"
         + "\n".join(f"- {u}" for u in sources)
         + "\n"
