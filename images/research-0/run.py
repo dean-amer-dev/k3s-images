@@ -39,11 +39,14 @@ def load_prompt(query: str) -> tuple[str, str]:
         version = Client(base_url=endpoint).prompts.get(
             prompt_identifier=name, tag=os.environ.get("PHOENIX_PROMPT_TAG", "production")
         )
-        messages = version.format(variables={"query": query}).messages
+        messages = version.format(variables={"query": query, "date": datetime.date.today().strftime("%A, %B %d, %Y")}).messages
         text = "\n\n".join(
             m["content"] if isinstance(m["content"], str) else "".join(p.get("text", "") for p in m["content"])
             for m in messages
         )
+        if query not in text:
+            # the report writer is not told the question otherwise
+            text += f"\n\nResearch question: {query}"
         label = f"phoenix:{name}@{getattr(version, 'id', '?')}"
         print(f"using Phoenix prompt {label}")
         return text, label
