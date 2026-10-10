@@ -27,6 +27,30 @@ def setup_tracing() -> None:
     OpenAIInstrumentor().instrument(tracer_provider=provider)
 
 
+def load_prompt(query: str) -> str:
+    """Report instructions from the Phoenix prompt (name/tag from env); empty string means use the built-in default."""
+    name = os.environ.get("PHOENIX_PROMPT_NAME")
+    endpoint = os.environ.get("PHOENIX_COLLECTOR_ENDPOINT")
+    if not name or not endpoint:
+        return ""
+    try:
+        from phoenix.client import Client
+
+        version = Client(base_url=endpoint).prompts.get(
+            prompt_identifier=name, tag=os.environ.get("PHOENIX_PROMPT_TAG", "production")
+        )
+        messages = version.format(variables={"query": query}).messages
+        text = "\n\n".join(
+            m["content"] if isinstance(m["content"], str) else "".join(p.get("text", "") for p in m["content"])
+            for m in messages
+        )
+        print(f"using Phoenix prompt {name} version {getattr(version, 'id', '?')}")
+        return text
+    except Exception as e:
+        print(f"WARNING: could not load Phoenix prompt {name!r}, using built-in default: {e}")
+        return ""
+
+
 def slugify(text: str) -> str:
     return re.sub(r"[^a-z0-9]+", "-", text.lower()).strip("-")[:60] or "report"
 
@@ -39,7 +63,7 @@ async def main() -> None:
 
     researcher = GPTResearcher(query=query, report_type="research_report")
     await researcher.conduct_research()
-    report = await researcher.write_report()
+    report = await researcher.write_report(custom_prompt=load_prompt(query))
     sources = sorted(set(researcher.get_source_urls()))
     if not report or not sources:
         sys.exit(f"research produced no report or no sources (sources={len(sources)})")
