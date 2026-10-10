@@ -39,7 +39,7 @@ def load_prompt(query: str) -> tuple[str, str]:
         version = Client(base_url=endpoint).prompts.get(
             prompt_identifier=name, tag=os.environ.get("PHOENIX_PROMPT_TAG", "production")
         )
-        messages = version.format(variables={"query": query, "date": datetime.date.today().strftime("%A, %B %d, %Y")}).messages
+        messages = version.format(variables={"query": query, "question": query, "date": datetime.date.today().strftime("%A, %B %d, %Y")}).messages
         text = "\n\n".join(
             m["content"] if isinstance(m["content"], str) else "".join(p.get("text", "") for p in m["content"])
             for m in messages
